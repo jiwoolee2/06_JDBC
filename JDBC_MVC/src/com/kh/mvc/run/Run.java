@@ -17,3 +17,13 @@ public class Run {
 	}
 
 }
+
+/* Run에 main에서 시작
+ * -> Userview에있는 mainMenu 메서드를 호출하려고하면 필드가 먼저 메모리에 올라감
+ * -> 따라서 Scanner, UserController 객체 생성
+ * -> UserDAO 객체 생성
+ * -> mainMenu 메서드 호출, stack영역에 메서드 올라감
+ * 
+ */
+
+

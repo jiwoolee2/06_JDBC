@@ -5,7 +5,7 @@ import java.sql.Date;
 public class UserDTO {
 	
 	/*
-	 * 한 행의 데이터를 담기 위한 목적을 만듦
+	 * DB의 테이블에 있는 한 행의 데이터를 담기 위한 목적으로 만듦
 	 */
 	private int userNo;
 	private String userId;

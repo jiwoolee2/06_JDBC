@@ -1,5 +1,10 @@
 package com.kh.mvc.model.dao;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,7 +63,31 @@ public class UserDAO {
 	 * 								DML : 처리된 행의 개수 
 	 */
 	
-	public void findAll() {
+	private final String URL = "oracle.jdbc.driver.OracleDriver";
+	private final String USERNAME = "KH18_LJW";
+	private final String PASSWORD = "KH1234";
+	
+	
+	static { // 딱 한 번만 동작함
+		
+		/*
+		 * 예외처리? 정말 심각한거 말고 돌리다보면 별의별 문제들이 일어남/
+		 * 쪼잔한 문법 같은거 말고 프로그램 실행중에 발생하는 이런저런문제들
+		 * ex) 숫자만 넣어야하는데 문자를 넣는경우
+		 * 이건 막을수가 없음. 숫자만 써야하는데 문자를 입력하면 어떻게 막아
+		 * 그럼에도 불구하고 예외상황이 발생했을 때 프로그램은 정상적으로 동작해야함. 
+		 * 그러기 위해서 코드상으로 작업을 해 주는것을 예외처리라고 함...
+		 */
+		try {
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		
+		
+	}
+	
+	public List<UserDTO> findAll(Connection conn) {
 		
 		// DB가야지~~
 		/*
@@ -69,25 +98,136 @@ public class UserDAO {
 		 * 문제점 : userDTO가 몇개가 나올지 알 수 없음
 		 */
 		
-		
 		List<UserDTO> list = new ArrayList();
-		String sql = "SELECT"
+		String sql = "SELECT "
 										+		"USER_NO"
 										+ ", USER_ID"
 										+	", USER_PW"
 										+	", USER_NAME"
-										+	", ENROLL_DATE"
-							 + "FROM"
-										+ "TB_USER"
-							 + "ORDER"
-									+ "BY"
+										+	", ENROLL_DATE "
+							 + "FROM "
+										+ "TB_USER "
+							 + "ORDER " + "BY "
 									  + "ENROLL_DATE DESC";
-		return ;
+		
+		/*
+		 * null로 초기화 해야되는 이유?
+		 * -> 메서드 영역에서 선언된 변수는 stack영역에 생성됨
+		 * -> 값이 없을 때 아래 try구문에서 오류 발생하면 아래 catch,finally로 내려가는데
+		 * -> 값이 안들어갔는데 close를 할 수 없음..
+		 */
+		
+		//Connection conn = null;
+		PreparedStatement pstmt = null;
+		ResultSet rset = null;
+		
+		try {
+			//conn = DriverManager.getConnection("jdbc:oracle:thin:@112.221.156.34:12345:XE","KH18_LJW","KH1234");
+			
+			
+			pstmt = conn.prepareStatement(sql);
+			rset = pstmt.executeQuery();
+			
+			
+			 //rset.next(); 다음행이 존재하면 true 반환, 아니면 false 반환
+			while(rset.next()) {
+				// 조회 결과 컬럼 값을 DTO필드에 담는 작업 및 리스트에 요소로 추가
+				// DB에서 뽑아낸 테이블의 데이터를 UserDTO에서 필드에 만든 변수에 담아야함 
+				// 값을 담으려면 값이 메모리에 올라가 있어야 함. 
+				// UserDTO 객체를 생성하여 메모리에 올림
+				
+				UserDTO user = new UserDTO(); // 값을 담을 UserDTO 객체 생성
+				
+				user.setUserNo(rset.getInt("USER_NO"));
+				user.setUserId(rset.getString("USER_ID"));
+				user.setUserPw(rset.getString("USER_PW"));
+				user.setUserName(rset.getString("USER_Name"));
+				user.setEnrollDate(rset.getDate("ENROLL_DATE"));
+				
+				//
+				list.add(user);
+				
+			}
+			
+			
+			
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+				System.out.println("-=-=-=");
+		} 
+		/* finally가 의미가 있으려면 위에 return구문이 있어야 함. 
+		 * finally는 return 이 앞에 있어도 무조건 실행되어야 하기 때문에..
+		 * 
+		 * 위에 return구문이 없어도 finally를 쓰는 이유는??
+		 * -> 보기편함/ finally에 있는 내용은 무조건 실행되어야하는 내용이구나
+		 * 하고 파악할 수 있음.
+		 * 
+		 */
+		finally {
+				
+				try {
+					if(rset != null) rset.close();
+					if(pstmt != null) rset.close();
+					if(conn != null) rset.close();
+				} catch (SQLException e) {
+					System.out.println("ddd");
+				}
+			
+		}
+	
+		return list;
 		
 	}
 	
 	
-	
+	/*
+	 * @param user 사용자가 입력한 아이디/비밀번호/이름이 각각 필드에 대입되어있음
+	 * @return 아직 뭐 돌려줄지 안정함
+	 */
+	public int insertUser(UserDTO user) {
+		
+		Connection conn = null;
+		PreparedStatement pstmt = null;
+		
+		String sql = "INSERT "
+								+ " INTO "
+									   + "TB_USER "
+								+ "VALUES "								
+									   	+ "("
+									   	+ "SEQ_USER_NO.NEXTVAL"
+									   	+ ", ?"
+									   	+ ", ?"
+									   	+ ", ?"
+									   	+ ", SYSDATE"
+									   	 + ")";
+		int result = 0;
+		try {
+			conn = DriverManager.getConnection("jdbc:oracle:thin:@112.221.156.34:12345:XE",
+					"KH18_LJW","KH1234");
+			
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, user.getUserId());
+			pstmt.setString(2, user.getUserPw());
+			pstmt.setString(3, user.getUserName());
+			
+			result = pstmt.executeUpdate();
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+		} finally {
+			
+			try {
+				if(pstmt != null && !pstmt.isClosed()) pstmt.close();
+				if(conn != null) conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		return result;
+	}
 	
 	
 	
